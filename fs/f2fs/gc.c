@@ -268,6 +268,8 @@ static void f2fs_stop_rapid_gc(void)
 		f2fs_stop_gc_thread(sbi);
 	}
 	mutex_unlock(&gc_sbi_mutex);
+
+	rapid_gc_set_wakelock();
 }
 
 void f2fs_gc_sbi_list_add(struct f2fs_sb_info *sbi)
