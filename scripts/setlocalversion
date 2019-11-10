@@ -82,7 +82,7 @@ scm_version()
 			git --no-optional-locks status -uno --porcelain 2>/dev/null ||
 			git diff-index --name-only HEAD
 		} | grep -qvE '^(.. )?scripts/package'; then
-			printf '%s' -special-v3
+			printf '%s' -special
 		fi
 
 		# All done with git
