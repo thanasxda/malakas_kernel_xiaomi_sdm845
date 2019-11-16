@@ -865,6 +865,8 @@ ifeq ($(cc-name),gcc)
 KBUILD_CFLAGS	+= -Ofast -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55+crc+crypto+fp16+simd+sve \
 -Wno-attribute-alias -fomit-frame-pointer -pipe \
 -funroll-loops \
+-ftree-vectorize \
+-ftree-loop-vectorize \
 -fforce-addr \
 
 #-floop-nest-optimize -fprefetch-loop-arrays 
