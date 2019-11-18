@@ -23,10 +23,10 @@ MLX=~/GIT/malakas_kernel_xiaomi_sdm845
 AK=$MLX/AnyKernel3
 OUT=$MLX/out/arch/arm64/boot
 KERNEL=~/Desktop/MLX
-TC=/
+TC=~/TOOLCHAIN
 ###
-GCC32=$TC/usr/bin 
-GCC64=$TC/usr/bin
+GCC32=$TC/arm-linux-gnueabi/bin 
+GCC64=$TC/aarch64-linux-gnu/bin
 CLANG=$TC/clang/bin
 BINUTILS=$TC/binutils/bin
 ###
