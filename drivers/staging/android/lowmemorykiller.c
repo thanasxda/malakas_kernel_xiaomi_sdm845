@@ -42,6 +42,13 @@
 #include <linux/rcupdate.h>
 #include <linux/profile.h>
 #include <linux/notifier.h>
+#include <linux/mutex.h>
+#include <linux/delay.h>
+#include <linux/swap.h>
+#include <linux/fs.h>
+#include <linux/cpuset.h>
+#include <linux/vmpressure.h>
+#include <linux/freezer.h>
 #include <linux/circ_buf.h>
 #include <linux/proc_fs.h>
 #include <linux/slab.h>
@@ -49,6 +56,7 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/almk.h>
+#include "trace/lowmemorykiller.h"
 #include <linux/show_mem_notifier.h>
 
 #ifdef CONFIG_HIGHMEM
@@ -56,13 +64,6 @@
 #else
 #define _ZONE ZONE_NORMAL
 #endif
-#include <linux/circ_buf.h>
-#include <linux/proc_fs.h>
-#include <linux/slab.h>
-#include <linux/poll.h>
-
-#define CREATE_TRACE_POINTS
-#include "trace/lowmemorykiller.h"
 
 /* to enable lowmemorykiller */
 static int enable_lmk = 1;

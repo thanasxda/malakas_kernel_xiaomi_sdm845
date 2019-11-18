@@ -29,6 +29,7 @@
 #define DM_BUFIO_VMALLOC_PERCENT	25
 #define DM_BUFIO_WRITEBACK_RATIO	3
 #define DM_BUFIO_LOW_WATERMARK_RATIO	16
+
 /*
  * Check buffer ages in this interval (seconds)
  */
@@ -174,9 +175,13 @@ static unsigned long dm_bufio_cache_size;
  * at any time.  If it disagrees, the user has changed cache size.
  */
 static unsigned long dm_bufio_cache_size_latch;
+
 static DEFINE_SPINLOCK(global_spinlock);
+
 static LIST_HEAD(global_queue);
+
 static unsigned long global_num = 0;
+
 /*
  * Buffers are freed after this timeout
  */
@@ -200,9 +205,12 @@ static LIST_HEAD(dm_bufio_all_clients);
  * This mutex protects dm_bufio_cache_size_latch and dm_bufio_client_count
  */
 static DEFINE_MUTEX(dm_bufio_clients_lock);
+
 static struct workqueue_struct *dm_bufio_wq;
 static struct delayed_work dm_bufio_cleanup_old_work;
 static struct work_struct dm_bufio_replacement_work;
+
+
 #ifdef CONFIG_DM_DEBUG_BLOCK_STACK_TRACING
 static void buffer_record_stack(struct dm_buffer *b)
 {
@@ -250,25 +258,32 @@ static void __remove(struct dm_bufio_client *c, struct dm_buffer *b)
 	rb_erase(&b->node, &c->buffer_tree);
 }
 /*----------------------------------------------------------------*/
+
 static void adjust_total_allocated(struct dm_buffer *b, bool unlink)
 {
 	enum data_mode data_mode;
 	long diff;
+
 	static unsigned long * const class_ptr[DATA_MODE_LIMIT] = {
 		&dm_bufio_allocated_kmem_cache,
 		&dm_bufio_allocated_get_free_pages,
 		&dm_bufio_allocated_vmalloc,
 	};
+
 	data_mode = b->data_mode;
 	diff = (long)b->c->block_size;
 	if (unlink)
 		diff = -diff;
+
 	spin_lock(&global_spinlock);
+
 	*class_ptr[data_mode] += diff;
 	dm_bufio_current_allocated += diff;
 	if (dm_bufio_current_allocated > dm_bufio_peak_allocated)
 		dm_bufio_peak_allocated = dm_bufio_current_allocated;
+
 	b->accessed = 1;
+
 	if (!unlink) {
 		list_add(&b->global_list, &global_queue);
 		global_num++;
@@ -278,6 +293,7 @@ static void adjust_total_allocated(struct dm_buffer *b, bool unlink)
 		list_del(&b->global_list);
 		global_num--;
 	}
+
 	spin_unlock(&global_spinlock);
 }
 /*
@@ -387,6 +403,7 @@ static struct dm_buffer *alloc_buffer(struct dm_bufio_client *c, gfp_t gfp_mask)
 		kfree(b);
 		return NULL;
 	}
+
 #ifdef CONFIG_DM_DEBUG_BLOCK_STACK_TRACING
 	memset(&b->stack_trace, 0, sizeof(b->stack_trace));
 #endif
@@ -398,6 +415,7 @@ static struct dm_buffer *alloc_buffer(struct dm_bufio_client *c, gfp_t gfp_mask)
 static void free_buffer(struct dm_buffer *b)
 {
 	struct dm_bufio_client *c = b->c;
+
 	free_buffer_data(c, b->data, b->data_mode);
 	kfree(b);
 }
@@ -413,6 +431,7 @@ static void __link_buffer(struct dm_buffer *b, sector_t block, int dirty)
 	list_add(&b->lru_list, &c->lru[dirty]);
 	__insert(b->c, b);
 	b->last_accessed = jiffies;
+
 	adjust_total_allocated(b, false);
 }
 /*
@@ -425,6 +444,7 @@ static void __unlink_buffer(struct dm_buffer *b)
 	c->n_buffers[b->list_mode]--;
 	__remove(b->c, b);
 	list_del(&b->lru_list);
+
 	adjust_total_allocated(b, true);
 }
 /*
@@ -433,7 +453,9 @@ static void __unlink_buffer(struct dm_buffer *b)
 static void __relink_lru(struct dm_buffer *b, int dirty)
 {
 	struct dm_bufio_client *c = b->c;
+
 	b->accessed = 1;
+
 	BUG_ON(!c->n_buffers[b->list_mode]);
 	c->n_buffers[b->list_mode]--;
 	c->n_buffers[dirty]++;
@@ -1472,6 +1494,7 @@ static void __evict_old_buffers(struct dm_bufio_client *c, unsigned long age_hz)
 	}
 	dm_bufio_unlock(c);
 }
+
 static void do_global_cleanup(struct work_struct *w)
 {
 	struct dm_bufio_client *locked_client = NULL;
@@ -1481,12 +1504,16 @@ static void do_global_cleanup(struct work_struct *w)
 	unsigned long threshold = dm_bufio_cache_size -
 		dm_bufio_cache_size / DM_BUFIO_LOW_WATERMARK_RATIO;
 	unsigned long loops = global_num * 2;
+
 	mutex_lock(&dm_bufio_clients_lock);
+
 	while (1) {
 		cond_resched();
+
 		spin_lock(&global_spinlock);
 		if (unlikely(dm_bufio_current_allocated <= threshold))
 			break;
+
 		spinlock_hold_count = 0;
 get_next:
 		if (!loops--)
@@ -1494,6 +1521,7 @@ get_next:
 		if (unlikely(list_empty(&global_queue)))
 			break;
 		b = list_entry(global_queue.prev, struct dm_buffer, global_list);
+
 		if (b->accessed) {
 			b->accessed = 0;
 			list_move(&b->global_list, &global_queue);
@@ -1502,30 +1530,39 @@ get_next:
 			spin_unlock(&global_spinlock);
 			continue;
 		}
+
 		current_client = b->c;
 		if (unlikely(current_client != locked_client)) {
 			if (locked_client)
 				dm_bufio_unlock(locked_client);
+
 			if (!dm_bufio_trylock(current_client)) {
 				spin_unlock(&global_spinlock);
 				dm_bufio_lock(current_client);
 				locked_client = current_client;
 				continue;
 			}
+
 			locked_client = current_client;
 		}
+
 		spin_unlock(&global_spinlock);
+
 		if (unlikely(!__try_evict_buffer(b, GFP_KERNEL))) {
 			spin_lock(&global_spinlock);
 			list_move(&b->global_list, &global_queue);
 			spin_unlock(&global_spinlock);
 		}
 	}
+
 	spin_unlock(&global_spinlock);
+
 	if (locked_client)
 		dm_bufio_unlock(locked_client);
+
 	mutex_unlock(&dm_bufio_clients_lock);
 }
+
 static void cleanup_old_buffers(void)
 {
 	unsigned long max_age_hz = get_max_age_hz();
@@ -1536,9 +1573,11 @@ static void cleanup_old_buffers(void)
 		__evict_old_buffers(c, max_age_hz);
 	mutex_unlock(&dm_bufio_clients_lock);
 }
+
 static void work_fn(struct work_struct *w)
 {
 	cleanup_old_buffers();
+
 	queue_delayed_work(dm_bufio_wq, &dm_bufio_cleanup_old_work,
 			   DM_BUFIO_WORK_TIMER_SECS * HZ);
 }
@@ -1573,6 +1612,7 @@ static int __init dm_bufio_init(void)
 	dm_bufio_wq = alloc_workqueue("dm_bufio_cache", WQ_MEM_RECLAIM, 0);
 	if (!dm_bufio_wq)
 		return -ENOMEM;
+
 	INIT_DELAYED_WORK(&dm_bufio_cleanup_old_work, work_fn);
 	INIT_WORK(&dm_bufio_replacement_work, do_global_cleanup);
 	queue_delayed_work(dm_bufio_wq, &dm_bufio_cleanup_old_work,
@@ -1586,6 +1626,7 @@ static void __exit dm_bufio_exit(void)
 {
 	int bug = 0;
 	int i;
+
 	cancel_delayed_work_sync(&dm_bufio_cleanup_old_work);
 	flush_workqueue(dm_bufio_wq);
 	destroy_workqueue(dm_bufio_wq);
