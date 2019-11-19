@@ -1,5 +1,4 @@
 /* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
- * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -153,7 +152,7 @@ static irqreturn_t nqx_dev_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int __maybe_unused is_data_available_for_read(struct nqx_dev *nqx_dev)
+static int is_data_available_for_read(struct nqx_dev *nqx_dev)
 {
 	int ret;
 
