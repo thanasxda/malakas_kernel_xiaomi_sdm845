@@ -3372,6 +3372,8 @@ static int msm_otg_dpdm_regulator_disable(struct regulator_dev *rdev)
 
 	msm_otg_set_mode_nondriving(motg, false);
 
+	msm_otg_set_mode_nondriving(motg, false);
+
 	if (motg->rm_pulldown) {
 		/* Let sm_work handle it if USB core is active */
 		if (phy->otg->state == OTG_STATE_B_IDLE ||
