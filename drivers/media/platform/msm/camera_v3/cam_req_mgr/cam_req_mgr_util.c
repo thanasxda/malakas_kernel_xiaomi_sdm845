@@ -132,7 +132,7 @@ void cam_dump_tbl_info(void)
 {
 	int i;
 
-	for (i = 0; i < CAM_REQ_MGR_MAX_HANDLES; i++)
+	for (i = 0; i < CAM_REQ_MGR_MAX_HANDLES_V2; i++)
 		CAM_INFO(CAM_CRM, "session_hdl=%x hdl_value=%x\n"
 			"type=%d state=%d dev_id=%lld",
 			hdl_tbl->hdl[i].session_hdl,
