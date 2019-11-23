@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1229,12 +1229,10 @@ static unsigned long vco_10nm_recalc_rate(struct clk_hw *hw,
 	}
 
 	/*
-	 * Calculate the vco rate from HW registers only for handoff cases.
-	 * For other cases where a vco_10nm_set_rate() has already been
-	 * called, just return the rate that was set earlier. This is due
-	 * to the fact that recalculating VCO rate requires us to read the
-	 * correct value of the pll_out_div divider clock, which is only set
-	 * afterwards.
+	 * In the case when vco arte is set, the recalculation function should
+	 * return the current rate as to avoid trying to set the vco rate
+	 * again. However durng handoff, recalculation should set the flag
+	 * according to the status of PLL.
 	 */
 	if (pll->vco_current_rate != 0) {
 		pr_debug("returning vco rate = %lld\n", pll->vco_current_rate);
