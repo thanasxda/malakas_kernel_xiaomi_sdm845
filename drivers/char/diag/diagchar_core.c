@@ -3718,7 +3718,12 @@ exit:
 				DIAG_LOG(DIAG_DEBUG_DCI,
 				"diag: valid task doesn't exist for pid = %d\n",
 				entry->tgid);
-				put_pid(pid_struct);
+				continue;
+			}
+			if (task_s == entry->client)
+				if (entry->client->tgid != current->tgid)
+					continue;
+			if (!entry->in_service)
 				continue;
 			}
 			if (task_s == entry->client) {
