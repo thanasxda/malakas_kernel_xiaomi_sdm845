@@ -841,6 +841,7 @@ KBUILD_CFLAGS	+= -Ofast -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55
 -ftree-vectorize \
 -ftree-loop-vectorize \
 -fforce-addr \
+-floop-parallelize-all -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block 
 
 #-floop-nest-optimize -fprefetch-loop-arrays 
 #KBUILD_CFLAGS	+= -fno-gcse  
