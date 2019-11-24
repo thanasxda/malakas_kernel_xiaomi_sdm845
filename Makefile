@@ -838,15 +838,12 @@ ifeq ($(cc-name),gcc)
 KBUILD_CFLAGS	+= -Ofast -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55+crc+crypto+fp16+simd+sve \
 -Wno-attribute-alias -fomit-frame-pointer -pipe \
 -funroll-loops \
--ftree-vectorize \
--ftree-loop-vectorize \
 -fforce-addr \
--floop-parallelize-all -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block 
+-floop-parallelize-all -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block -floop-optimize -floop-nest-optimize -fprefetch-loop-arrays -ftree-vectorize -ftree-loop-vectorize 
 
-#-floop-nest-optimize -fprefetch-loop-arrays 
+
 #KBUILD_CFLAGS	+= -fno-gcse  
-#KBUILD_CFLAGS	+= -floop-strip-mine -floop-block
-#KBUILD_CFLAGS	+= -floop-optimize -ftree-vectorize -ftracer
+#KBUILD_CFLAGS	+= -ftracer
 LDFLAGS		+= -O3 
 LDFLAGS += -fuse-ld=gold
 KBUILD_CFLAGS	+= $(call cc-option,-mabi=lp64)
