@@ -1884,10 +1884,12 @@ static int cam_ife_csid_enable_pxl_path(
 		is_ipp = true;
 		pxl_reg = csid_reg->ipp_reg;
 		path_config = &(csid_hw->ipp_path_config);
+		csid_hw->res_sof_cnt[CAM_IFE_PIX_PATH_RES_IPP] = 0;
 	} else {
 		is_ipp = false;
 		pxl_reg = csid_reg->ppp_reg;
 		path_config = &(csid_hw->ppp_path_config);
+		csid_hw->res_sof_cnt[CAM_IFE_PIX_PATH_RES_PPP] = 0;
 	}
 
 	if (res->res_state != CAM_ISP_RESOURCE_STATE_INIT_HW) {
