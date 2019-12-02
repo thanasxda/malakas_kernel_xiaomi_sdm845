@@ -1490,8 +1490,6 @@ static int cpp_close_node(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	uint32_t i;
 	int rc = -1;
-	int counter = 0;
-	u32 result = 0;
 	struct cpp_device *cpp_dev = NULL;
 	struct msm_device_queue *processing_q = NULL;
 	struct msm_device_queue *eventData_q = NULL;
