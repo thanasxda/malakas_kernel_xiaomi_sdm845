@@ -706,6 +706,7 @@ static int cam_ois_pkt_parse(struct cam_ois_ctrl_t *o_ctrl, void *arg)
 	}
 	return rc;
 pwr_dwn:
+	o_ctrl->cam_ois_state = CAM_OIS_ACQUIRE;
 	cam_ois_power_down(o_ctrl);
 	return rc;
 }

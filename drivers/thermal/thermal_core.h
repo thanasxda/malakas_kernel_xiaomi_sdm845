@@ -2,6 +2,7 @@
  *  thermal_core.h
  *
  *  Copyright (C) 2012  Intel Corp
+ *  Copyright (C) 2018 XiaoMi, Inc.
  *  Author: Durgadoss R <durgadoss.r@intel.com>
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -134,6 +135,8 @@ int of_parse_thermal_message(void);
 void free_thermal_message(void);
 void of_thermal_handle_trip_temp(struct thermal_zone_device *tz,
 					int trip_temp);
+int of_parse_thermal_message(void);
+void free_thermal_message(void);
 #else
 static inline int of_parse_thermal_zones(void) { return 0; }
 static inline void of_thermal_destroy_zones(void) { }

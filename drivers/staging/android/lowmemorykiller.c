@@ -64,10 +64,6 @@
 #else
 #define _ZONE ZONE_NORMAL
 #endif
-#include <linux/circ_buf.h>
-#include <linux/proc_fs.h>
-#include <linux/slab.h>
-#include <linux/poll.h>
 
 /* to enable lowmemorykiller */
 static int enable_lmk = 1;

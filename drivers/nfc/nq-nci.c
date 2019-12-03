@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -152,6 +153,7 @@ static irqreturn_t nqx_dev_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+#ifndef CONFIG_MACH_XIAOMI
 static int is_data_available_for_read(struct nqx_dev *nqx_dev)
 {
 	int ret;
@@ -160,6 +162,7 @@ static int is_data_available_for_read(struct nqx_dev *nqx_dev)
 	ret = wait_event_interruptible(nqx_dev->read_wq, !nqx_dev->irq_enabled);
 	return ret;
 }
+#endif
 
 static ssize_t nfc_read(struct file *filp, char __user *buf,
 					size_t count, loff_t *offset)
@@ -694,7 +697,7 @@ static const struct file_operations nfc_dev_fops = {
  * This function will block NFCC to enter FW download mode.
  */
 
-#if 0
+#ifndef CONFIG_MACH_XIAOMI
 /* Check for availability of NQ_ NFC controller hardware */
 static int nfcc_hw_check(struct i2c_client *client, struct nqx_dev *nqx_dev)
 {
@@ -1185,7 +1188,7 @@ static int nqx_probe(struct i2c_client *client,
 	nqx_disable_irq(nqx_dev);
 
 	/* Do not perform nfcc_hw_check, make sure that nfcc is present */
-#if 0
+#ifndef CONFIG_MACH_XIAOMI
 	/*
 	 * To be efficient we need to test whether nfcc hardware is physically
 	 * present before attempting further hardware initialisation.

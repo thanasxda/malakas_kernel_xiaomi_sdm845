@@ -633,7 +633,7 @@ static char version[8] = "smb:01:";
 static inline void dump_reg(struct smb_charger *chg, u16 addr,
 		const char *name)
 {
-	u8 reg = 0;
+	u8 reg;
 	int rc;
 	char reg_data[50] = "";
 
@@ -978,8 +978,6 @@ int smblib_rerun_apsd_if_required(struct smb_charger *chg)
 	rc = smblib_request_dpdm(chg, true);
 	if (rc < 0)
 		smblib_err(chg, "Couldn't to enable DPDM rc=%d\n", rc);
-		if (chg->fcc_stepper_enable)
-			vote(chg->fcc_votable, FCC_STEPPER_VOTER, false, 0);
 	*/
 
 	chg->uusb_apsd_rerun_done = true;
@@ -2432,9 +2430,6 @@ int smblib_set_prop_dc_temp_level(struct smb_charger *chg,
 	if (chg->dc_temp_level == 0)
 		return vote(chg->dc_icl_votable, THERMAL_DAEMON_VOTER, false, 0);
 
-	smblib_dbg(chg, PR_OEM, "thermal level:%d, batt temp:%d, thermal_levels:%d dc_present=%d\n",
-			val->intval, batt_temp.intval, chg->dc_thermal_levels,dc_present.intval);
-
 	vote(chg->dc_icl_votable, THERMAL_DAEMON_VOTER, true,
 		chg->thermal_mitigation_dc[chg->dc_temp_level]);
 
@@ -2464,16 +2459,6 @@ static void smblib_reg_work(struct work_struct *work)
 	usb_present = val.intval;
 
 	if (usb_present) {
-		smblib_dbg(chg, PR_OEM, "ICL vote value is %d voted by %s\n",
-					get_effective_result(chg->usb_icl_votable),
-					get_effective_client(chg->usb_icl_votable));
-		smblib_dbg(chg, PR_OEM, "FCC vote value is %d voted by %s\n",
-					get_effective_result(chg->fcc_votable),
-					get_effective_client(chg->fcc_votable));
-		smblib_dbg(chg, PR_OEM, "FV vote value is %d voted by %s\n",
-					get_effective_result(chg->fv_votable),
-					get_effective_client(chg->fv_votable));
-
 		power_supply_get_property(chg->usb_psy,
 					POWER_SUPPLY_PROP_INPUT_CURRENT_NOW,
 					&val);
@@ -2504,23 +2489,18 @@ static void smblib_reg_work(struct work_struct *work)
 					&val);
 		typec_orientation = val.intval;
 
-		smblib_dbg(chg, PR_OEM, "ICL settle value[%d], usbin adc current[%d], vbusin adc vol[%d]\n",
-							icl_settle, usb_cur_in, usb_vol_in);
 		if (!chg->usb_main_psy) {
 			chg->usb_main_psy = power_supply_get_by_name("main");
-		}
-		else {
+		} else {
 			power_supply_get_property(chg->usb_main_psy,
 							POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX,
 							&val);
 			main_fcc = val.intval;
-			smblib_dbg(chg, PR_OEM, "Main FCC[%d] ", main_fcc);
 		}
 
 		if (!chg->pl.psy) {
 			chg->pl.psy = power_supply_get_by_name("parallel");
-		}
-		else {
+		} else {
 			power_supply_get_property(chg->pl.psy,
 							POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX,
 							&val);
@@ -2529,11 +2509,7 @@ static void smblib_reg_work(struct work_struct *work)
 							POWER_SUPPLY_PROP_INPUT_SUSPEND,
 							&val);
 			parallel_charging_enable = !val.intval;
-			smblib_dbg(chg, PR_OEM, "parallel ENABLE[%d] FCC[%d]\n", parallel_charging_enable, parallel_fcc);
 		}
-
-		smblib_dbg(chg, PR_OEM, "Type-C orientation[%d], Type-C mode[%d], Real Charge Type[%d]\n",
-                                                        typec_orientation, typec_mode, charge_type);
 
 		schedule_delayed_work(&chg->reg_work,
 			CHARGING_PERIOD_S * HZ);
@@ -2662,10 +2638,6 @@ int smblib_set_prop_system_temp_level(struct smb_charger *chg,
 	vote(chg->fcc_votable, THERMAL_DAEMON_VOTER, true,
 			chg->thermal_mitigation[chg->system_temp_level]);
 #endif
-	smblib_dbg(chg, PR_OEM, "thermal level:%d, batt temp:%d, thermal_levels:%d"
-                        "chg->system_temp_level:%d, chg->typec_present=%d charger_type:%d\n",
-                        val->intval, batt_temp.intval, chg->thermal_levels,
-                        chg->system_temp_level, chg->typec_present, chg->usb_psy_desc.type);
 	return 0;
 }
 #endif
@@ -4392,6 +4364,22 @@ void smblib_usb_plugin_locked(struct smb_charger *chg)
 		if (chg->fcc_stepper_enable)
 			vote(chg->fcc_votable, FCC_STEPPER_VOTER, false, 0);
 
+		if (get_client_vote_locked(chg->usb_icl_votable, USER_VOTER) != 0) {
+			rc = smblib_set_usb_suspend(chg, false);
+			if (rc < 0)
+				smblib_err(chg, "Couldn't resume input rc=%d\n", rc);
+		}
+		if (is_client_vote_enabled(chg->usb_icl_votable,
+							USB_PSY_VOTER)) {
+			vote(chg->usb_icl_votable, USB_PSY_VOTER, false, 0);
+			if (rc < 0)
+				smblib_err(chg, "Couldn't unvote USB_PSY rc=%d\n", rc);
+		}
+
+		if (is_client_vote_enabled(chg->usb_icl_votable,
+				WEAK_CHARGER_VOTER) && chg->use_ext_boost)
+			vote(chg->usb_icl_votable, WEAK_CHARGER_VOTER, false, 0);
+
 		/* Schedule work to enable parallel charger */
 		vote(chg->awake_votable, PL_DELAY_VOTER, true, 0);
 		schedule_delayed_work(&chg->pl_enable_work,
@@ -5342,8 +5330,6 @@ unlock:
 
 	/* notify policy engine to update pd->typec_mode when typec removal */
 	notify_typec_mode_changed_for_pd();
-
-	smblib_dbg(chg, PR_OEM, "done\n");
 }
 
 static void smblib_handle_typec_insertion(struct smb_charger *chg)

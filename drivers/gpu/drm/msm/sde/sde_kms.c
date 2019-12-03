@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  * Copyright (C) 2013 Red Hat
  * Author: Rob Clark <robdclark@gmail.com>
  *
@@ -2314,16 +2315,6 @@ static void sde_kms_preclose(struct msm_kms *kms, struct drm_file *file)
 	/* cancel pending flip event */
 	for (i = 0; i < priv->num_crtcs; i++)
 		sde_crtc_complete_flip(priv->crtcs[i], file);
-
-	drm_modeset_acquire_init(&ctx, 0);
-retry:
-	ret = drm_modeset_lock_all_ctx(dev, &ctx);
-	if (ret == -EDEADLK) {
-		drm_modeset_backoff(&ctx);
-		goto retry;
-	} else if (WARN_ON(ret)) {
-		goto end;
-	}
 
 	state = drm_atomic_state_alloc(dev);
 	if (!state) {

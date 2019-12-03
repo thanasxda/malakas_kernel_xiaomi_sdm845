@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -32,9 +33,14 @@ static BLOCKING_NOTIFIER_HEAD(drm_notifier_list);
 #define to_dsi_bridge(x)     container_of((x), struct dsi_bridge, base)
 #define to_dsi_state(x)      container_of((x), struct dsi_connector_state, base)
 
+#define WAIT_RESUME_TIMEOUT 200
+
 #define FAKE_PANEL_ID 9
 
 struct dsi_bridge *gbridge;
+static struct delayed_work prim_panel_work;
+static atomic_t prim_panel_is_on;
+static struct wakeup_source prim_panel_wakelock;
 
 struct drm_notify_data g_notify_data;
 
@@ -255,7 +261,8 @@ static void dsi_bridge_pre_enable(struct drm_bridge *bridge)
 									rc);
 
 	if (c_bridge->display->is_prim_display) {
-		if ((get_hw_version_platform() == HARDWARE_PLATFORM_DIPPERN)) {
+		atomic_set(&prim_panel_is_on, true);
+		if (get_hw_version_platform() == HARDWARE_PLATFORM_DIPPERN) {
 			if (!c_bridge->display->panel->bl_config.ss_panel_id) {
 				rc = panel_disp_param_send(c_bridge->display, 0x40000000);
 				if (!rc)
@@ -411,6 +418,11 @@ static void dsi_bridge_post_disable(struct drm_bridge *bridge)
 
 	if (!bridge) {
 		pr_err("Invalid params\n");
+		return;
+	}
+
+	if (c_bridge->display->is_prim_display && !atomic_read(&prim_panel_is_on)) {
+		pr_err("%s Already power off\n", __func__);
 		return;
 	}
 
@@ -1160,6 +1172,12 @@ void dsi_drm_bridge_cleanup(struct dsi_bridge *bridge)
 {
 	if (bridge && bridge->base.encoder)
 		bridge->base.encoder->bridge = NULL;
+
+	if (bridge == gbridge) {
+		atomic_set(&prim_panel_is_on, false);
+		cancel_delayed_work_sync(&prim_panel_work);
+		wakeup_source_trash(&prim_panel_wakelock);
+	}
 
 	kfree(bridge);
 }

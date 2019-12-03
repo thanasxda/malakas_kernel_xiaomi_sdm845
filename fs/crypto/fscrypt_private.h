@@ -66,7 +66,6 @@ enum ci_type_info {
  * inode is evicted.
  */
 struct fscrypt_info {
-
 	/* The actual crypto transform used for encryption and decryption */
 	struct crypto_skcipher *ci_ctfm;
 
