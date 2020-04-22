@@ -70,7 +70,7 @@ struct ceph_mount_options {
 
 	char *snapdir_name;   /* default ".snap" */
 	char *mds_namespace;  /* default NULL */
-	char *server_path;    /* default NULL (means "/") */
+	char *server_path;    /* default  "/" */
 };
 
 struct ceph_fs_client {

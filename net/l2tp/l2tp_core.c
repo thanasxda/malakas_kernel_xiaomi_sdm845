@@ -1343,9 +1343,6 @@ again:
 
 			hlist_del_init(&session->hlist);
 
-			if (test_and_set_bit(0, &session->dead))
-				goto again;
-
 			if (session->ref != NULL)
 				(*session->ref)(session);
 
@@ -1794,9 +1791,6 @@ EXPORT_SYMBOL_GPL(__l2tp_session_unhash);
  */
 int l2tp_session_delete(struct l2tp_session *session)
 {
-	if (test_and_set_bit(0, &session->dead))
-		return 0;
-
 	if (session->ref)
 		(*session->ref)(session);
 	__l2tp_session_unhash(session);
@@ -1945,8 +1939,7 @@ static __net_exit void l2tp_exit_net(struct net *net)
 	}
 	rcu_read_unlock_bh();
 
-	if (l2tp_wq)
-		flush_workqueue(l2tp_wq);
+	flush_workqueue(l2tp_wq);
 	rcu_barrier();
 }
 

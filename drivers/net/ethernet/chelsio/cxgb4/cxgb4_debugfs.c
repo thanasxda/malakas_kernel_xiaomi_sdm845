@@ -66,7 +66,8 @@ static void *seq_tab_start(struct seq_file *seq, loff_t *pos)
 static void *seq_tab_next(struct seq_file *seq, void *v, loff_t *pos)
 {
 	v = seq_tab_get_idx(seq->private, *pos + 1);
-	++(*pos);
+	if (v)
+		++*pos;
 	return v;
 }
 

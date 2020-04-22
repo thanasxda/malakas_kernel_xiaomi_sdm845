@@ -1,4 +1,5 @@
 /* Copyright (c) 2015-2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -152,6 +153,7 @@ static irqreturn_t nqx_dev_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+#ifndef CONFIG_MACH_XIAOMI
 static int is_data_available_for_read(struct nqx_dev *nqx_dev)
 {
 	int ret;
@@ -160,6 +162,7 @@ static int is_data_available_for_read(struct nqx_dev *nqx_dev)
 	ret = wait_event_interruptible(nqx_dev->read_wq, !nqx_dev->irq_enabled);
 	return ret;
 }
+#endif
 
 static ssize_t nfc_read(struct file *filp, char __user *buf,
 					size_t count, loff_t *offset)
@@ -758,18 +761,10 @@ static int nfcc_hw_check(struct i2c_client *client, struct nqx_dev *nqx_dev)
 				nci_get_version_rsp[3];
 			nqx_dev->nqx_info.info.rom_version =
 				nci_get_version_rsp[4];
-			if ((nci_get_version_rsp[3] == NFCC_SN100_A)
-				|| (nci_get_version_rsp[3] == NFCC_SN100_B)) {
-				nqx_dev->nqx_info.info.fw_minor =
-					nci_get_version_rsp[6];
-				nqx_dev->nqx_info.info.fw_major =
-					nci_get_version_rsp[7];
-			} else {
-				nqx_dev->nqx_info.info.fw_minor =
-					nci_get_version_rsp[10];
-				nqx_dev->nqx_info.info.fw_major =
-					nci_get_version_rsp[11];
-			}
+			nqx_dev->nqx_info.info.fw_minor =
+				nci_get_version_rsp[10];
+			nqx_dev->nqx_info.info.fw_major =
+				nci_get_version_rsp[11];
 		}
 		goto err_nfcc_reset_failed;
 	}
