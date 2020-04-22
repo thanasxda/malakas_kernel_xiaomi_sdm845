@@ -3359,8 +3359,6 @@ static int msm_otg_dpdm_regulator_enable(struct regulator_dev *rdev)
 					      motg->rm_pulldown, 0);
 	}
 
-	msm_otg_set_mode_nondriving(motg, true);
-
 	return ret;
 }
 

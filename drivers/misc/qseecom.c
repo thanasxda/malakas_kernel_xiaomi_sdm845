@@ -2708,50 +2708,6 @@ static int qseecom_unmap_ion_allocated_memory(struct qseecom_dev_handle *data)
 	return ret;
 }
 
-static int __qseecom_unload_app(struct qseecom_dev_handle *data,
-				uint32_t app_id)
-{
-	struct qseecom_unload_app_ireq req;
-	struct qseecom_command_scm_resp resp;
-	int ret = 0;
-
-	/* Populate the structure for sending scm call to load image */
-	req.qsee_cmd_id = QSEOS_APP_SHUTDOWN_COMMAND;
-	req.app_id = app_id;
-
-	/* SCM_CALL to unload the app */
-	ret = qseecom_scm_call(SCM_SVC_TZSCHEDULER, 1, &req,
-			sizeof(struct qseecom_unload_app_ireq),
-			&resp, sizeof(resp));
-	if (ret) {
-		pr_err("scm_call to unload app (id = %d) failed\n", app_id);
-		return -EFAULT;
-	}
-	switch (resp.result) {
-	case QSEOS_RESULT_SUCCESS:
-		pr_warn("App (%d) is unloaded\n", app_id);
-		break;
-	case QSEOS_RESULT_INCOMPLETE:
-		ret = __qseecom_process_incomplete_cmd(data, &resp);
-		if (ret)
-			pr_err("unload app %d fail proc incom cmd: %d,%d,%d\n",
-				app_id, ret, resp.result, resp.data);
-		else
-			pr_warn("App (%d) is unloaded\n", app_id);
-		break;
-	case QSEOS_RESULT_FAILURE:
-		pr_err("app (%d) unload_failed!!\n", app_id);
-		ret = -EFAULT;
-		break;
-	default:
-		pr_err("unload app %d get unknown resp.result %d\n",
-				app_id, resp.result);
-		ret = -EFAULT;
-		break;
-	}
-	return ret;
-}
-
 static int qseecom_unload_app(struct qseecom_dev_handle *data,
 				bool app_crash)
 {
