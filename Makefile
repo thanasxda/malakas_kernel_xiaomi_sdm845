@@ -303,10 +303,10 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = gcc
 HOSTCXX      = g++
-HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -Ofast -fomit-frame-pointer -std=gnu89 -pipe -fforce-addr 
+HOSTCFLAGS   := -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer -std=gnu89 -pipe -fforce-addr 
 
-HOSTCXXFLAGS = -Ofast
-subdir-ccflags-y := -Ofast
+HOSTCXXFLAGS = -O3
+subdir-ccflags-y := -O3
 
 ifeq ($(shell $(HOSTCC) -v 2>&1 | grep -c "clang version"), 1)
 HOSTCFLAGS  += -Wno-unused-value -Wno-unused-parameter \
@@ -354,6 +354,8 @@ CC		= $(CROSS_COMPILE)gcc
 LDGOLD		= $(CROSS_COMPILE)ld.gold
 LDLLD		= ld.lld
 CC		= $(CROSS_COMPILE)gcc
+LDGOLD		= $(CROSS_COMPILE)ld.gold
+LDLLD		= ld.lld
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -400,9 +402,10 @@ LINUXINCLUDE	+= $(filter-out $(LINUXINCLUDE),$(USERINCLUDE))
 KBUILD_AFLAGS   := -D__ASSEMBLY__
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -pipe \
 		   -fno-strict-aliasing -fno-common -fshort-wchar \
-		   -Wno-error \
 		   -Wno-format-security \
 		   -std=gnu89 -fdiagnostics-color=always \
+
+		   #-Werror-implicit-function-declaration \
 
 
 
@@ -532,11 +535,14 @@ endif
 ifneq ($(GCC_TOOLCHAIN),)
 CLANG_FLAGS	+= --gcc-toolchain=$(GCC_TOOLCHAIN)
 endif
-CLANG_FLAGS	+= -no-integrated-as
 CLANG_FLAGS	+= -Werror=unknown-warning-option
 KBUILD_CFLAGS	+= $(CLANG_FLAGS)
-KBUILD_AFLAGS	+= $(CLANG_FLAGS)
+KBUILD_AFLAGS	+= $(CLANG_FLAGS) -no-integrated-as
+ifeq ($(ld-name),lld)
+KBUILD_CFLAGS	+= -fuse-ld=lld
 endif
+endif
+
 
 ifeq ($(mixed-targets),1)
 # ===========================================================================
@@ -647,16 +653,6 @@ endif
 # Defaults to vmlinux, but the arch makefile usually adds further targets
 all: vmlinux
 
-# Make toolchain changes before including arch/$(SRCARCH)/Makefile to ensure
-# ar/cc/ld-* macros return correct values.
-ifdef CONFIG_LD_GOLD
-LDFINAL_vmlinux := $(LD)
-LD		:= $(LDGOLD)
-endif
-ifdef CONFIG_LD_LLD
-LD		:= $(LDLLD)
-endif
-
 KBUILD_CFLAGS	+= $(call cc-option,-fno-PIE)
 KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
 CFLAGS_GCOV	:= -fprofile-arcs -ftest-coverage \
@@ -683,15 +679,15 @@ KBUILD_LDFLAGS	+= -O3
 endif
 endif
 ifdef CONFIG_LTO_CLANG
-# use GNU gold with LLVMgold or LLD for LTO linking, and LD for vmlinux_link
-ifeq ($(ld-name),gold)
+# use GNU gold and LD for vmlinux_link, or LLD for LTO linking
 LDFLAGS		+= -plugin LLVMgold.so
 LDFLAGS		+= --plugin-opt=O3
-endif
+
 LDFLAGS		+= -plugin-opt=-function-sections
 LDFLAGS		+= -plugin-opt=-data-sections
 LDFLAGS		+= -plugin-opt=new-pass-manager
 LDFLAGS		+= -plugin-opt=mcpu=kryo
+
 # use llvm-ar for building symbol tables from IR files, and llvm-dis instead
 # of objdump for processing symbol versions and exports
 LLVM_AR		:= llvm-ar
@@ -713,9 +709,8 @@ KBUILD_CFLAGS	+= $(call cc-disable-warning,frame-address,)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-truncation)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, format-overflow)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, int-in-bool-context)
-KBUILD_CFLAGS	+= $(call cc-disable-warning, attribute-alias)
 KBUILD_CFLAGS	+= $(call cc-disable-warning, address-of-packed-member)
-KBUILD_CFLAGS	+= $(call cc-disable-warning, psabi)
+KBUILD_CFLAGS	+= $(call cc-disable-warning, attribute-alias)
 
 ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
 KBUILD_CFLAGS	+= $(call cc-option,-ffunction-sections,)
@@ -740,6 +735,7 @@ lto-clang-flags	:= -flto
 LDFLAGS		+= -plugin-opt=-safestack-use-pointer-address
 endif
 lto-clang-flags += -fvisibility=hidden
+lto-clang-flags	+= -O3
 
 # allow disabling only clang LTO where needed
 DISABLE_LTO_CLANG := -fno-lto -fvisibility=default
@@ -809,12 +805,11 @@ endif
 
 ifdef CONFIG_SAFESTACK_COLORING
 safestack-extra-flags += -mllvm -safe-stack-coloring=1
-KBUILD_CFLAGS   += -Ofast
+KBUILD_CFLAGS   += -O3
 endif
 
 ifdef CONFIG_LTO_CLANG
- if we use LLVMgold, pass extra flags to ld.gold
-LDFLAGS		+= -plugin-opt=-safestack-use-pointer-address
+#LDFLAGS		+= -plugin-opt=-safestack-use-pointer-address
 endif
 
 ifdef CONFIG_SAFESTACK_COLORING
@@ -831,28 +826,30 @@ ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
 ifdef CONFIG_PROFILE_ALL_BRANCHES
-KBUILD_CFLAGS	+= -Ofast $(call cc-disable-warning,maybe-uninitialized,)
+KBUILD_CFLAGS	+= -O3 $(call cc-disable-warning,maybe-uninitialized,)
 else
-KBUILD_CFLAGS	+= -Ofast
+KBUILD_CFLAGS	+= -O3
 endif
 endif
 
 #THANAS
-ifeq ($(cc-name),gcc)
-# Optimization for gcc sdm845
-KBUILD_CFLAGS	+= -Ofast -mtune=cortex-a75.cortex-a55 -mcpu=cortex-a75.cortex-a55+crc+crypto+fp16+simd+sve \
--Wno-attribute-alias -fomit-frame-pointer -pipe \
--funroll-loops \
--fforce-addr \
--floop-parallelize-all -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block -floop-optimize -floop-nest-optimize -fprefetch-loop-arrays -ftree-vectorize -ftree-loop-vectorize 
 
+# Optimization for gcc sdm845
+
+ifeq ($(cc-name),gcc)
+KBUILD_CFLAGS	+= -O3 -mtune=cortex-a75.cortex-a55 -ffast-math -mcpu=cortex-a75.cortex-a55+crc+crypto+fp16+simd+sve \
+-fomit-frame-pointer -pipe \
+-funroll-loops \
+-fforce-addr  \
+
+KBUILD_CFLAGS	+= -floop-parallelize-all -floop-interchange -ftree-loop-distribution -floop-strip-mine -floop-block -floop-optimize -floop-nest-optimize -fprefetch-loop-arrays -ftree-vectorize -ftree-loop-vectorize 
+endif
 
 #KBUILD_CFLAGS	+= -fno-gcse  
 #KBUILD_CFLAGS	+= -ftracer
 LDFLAGS		+= -O3 
-LDFLAGS += -fuse-ld=gold
-KBUILD_CFLAGS	+= $(call cc-option,-mabi=lp64)
-KBUILD_AFLAGS	+= $(call cc-option,-mabi=lp64)
+
+
 #LDFLAGS_vmlinux	+= $(call ld-option, --gc-sections,)
 #-fforce-addr -fopenmp -D_GLIBCXX_PARALLEL -ffunction-sections -fdata-sections -fvpt 
 #-fprofile-arcs -fauto-profile
@@ -867,18 +864,23 @@ KBUILD_AFLAGS	+= $(call cc-option,-mabi=lp64)
 # Some toolchains enable those fixes automatically, so opt-out.
 KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-835769)
 KBUILD_CFLAGS	+= $(call cc-option, -mno-fix-cortex-a53-843419)
-endif
+
+
+KBUILD_CFLAGS	+= $(call cc-option,-mabi=lp64)
+KBUILD_AFLAGS	+= $(call cc-option,-mabi=lp64)
+
+
+
+
+
 
 ifeq ($(cc-name),clang)
 # Add Some optimization flags for clang
-KBUILD_CFLAGS	+= -Ofast -march=armv8.3-a+crc+crypto+fp16+simd+sve -ffast-math -mcpu=cortex-a55+crc+crypto+fp16+simd+sve -mtune=cortex-a55 \
+KBUILD_CFLAGS	+= -O3 -march=armv8.3-a+crc+crypto+fp16+simd+sve -ffast-math -mcpu=cortex-a55+crc+crypto+fp16+simd+sve -mtune=cortex-a55 \
 -fomit-frame-pointer -pipe \
 -funroll-loops \
--fforce-addr \
+-fforce-addr -ftree-vectorize \
 
-endif
-
-ifdef CONFIG_POLLY_CLANG
 #KBUILD_CFLAGS	+= -fopenmp 
 KBUILD_CFLAGS	+= -mllvm -polly \
 		   -mllvm -polly-omp-backend=LLVM \
@@ -900,9 +902,12 @@ KBUILD_CFLAGS	+= -mllvm -polly \
 		   
 # Add EXP New Pass Manager for clang
 KBUILD_CFLAGS	+= -fexperimental-new-pass-manager
+endif
+		   
+
 LDFLAGS		+= -O3 
 
-endif
+
 
 
 
@@ -910,8 +915,12 @@ KBUILD_CFLAGS += $(call cc-ifversion, -lt, 0409, \
 			$(call cc-disable-warning,maybe-uninitialized,))
 
 ifdef CONFIG_CC_WERROR
-KBUILD_CFLAGS	+= -Werror
+#KBUILD_CFLAGS	+= -Werror
 endif
+KBUILD_CFLAGS	+= -Wno-error
+
+# Add EXP New Pass Manager for clang
+KBUILD_CFLAGS	+= $(call cc-option,-fexperimental-new-pass-manager)
 
 # Tell gcc to never replace conditional load with a non-conditional one
 KBUILD_CFLAGS	+= $(call cc-option,--param=allow-store-data-races=0)
@@ -1072,13 +1081,10 @@ KBUILD_CFLAGS	+= $(call cc-option,-fno-merge-all-constants)
 
 # for gcc -fno-merge-all-constants disables everything, but it is fine
 # to have actual conforming behavior enabled.
-KBUILD_CFLAGS	+= $(call cc-option,-fmerge-constants)
+#KBUILD_CFLAGS	+= $(call cc-option,-fmerge-constants)
 
 # Make sure -fstack-check isn't enabled (like gentoo apparently did)
 KBUILD_CFLAGS  += $(call cc-option,-fno-stack-check,)
-
-# conserve stack if available
-KBUILD_CFLAGS   += $(call cc-option,-fconserve-stack)
 
 # disallow errors like 'EXPORT_GPL(foo);' with missing header
 KBUILD_CFLAGS   += $(call cc-option,-Werror=implicit-int)
@@ -1129,6 +1135,10 @@ endif
 
 ifeq ($(CONFIG_STRIP_ASM_SYMS),y)
 LDFLAGS_vmlinux	+= $(call ld-option, -X,)
+endif
+
+ifeq ($(CONFIG_RELR),y)
+LDFLAGS_vmlinux	+= --pack-dyn-relocs=relr
 endif
 
 # Default kernel image to build when no specific target is given.
@@ -1236,7 +1246,6 @@ virt-y		:= $(patsubst %/, %/built-in.o, $(virt-y))
 # Externally visible symbols (used by link-vmlinux.sh)
 export KBUILD_VMLINUX_INIT := $(head-y) $(init-y)
 export KBUILD_VMLINUX_MAIN := $(core-y) $(libs-y) $(drivers-y) $(net-y) $(virt-y)
-export KBUILD_VMLINUX_LIBS := $(libs-y1)
 export KBUILD_LDS          := arch/$(SRCARCH)/kernel/vmlinux.lds
 export LDFLAGS_vmlinux
 # used by scripts/pacmage/Makefile
@@ -1369,11 +1378,11 @@ prepare-compiler-check: FORCE
 # Make sure we're using a supported toolchain with LTO_CLANG
 ifdef CONFIG_LTO_CLANG
   ifneq ($(call clang-ifversion, -ge, 0500, y), y)
-	@echo Cannot use CONFIG_LTO_CLANG: requires clang 5.0 or later >&2 
+	@echo Cannot use CONFIG_LTO_CLANG: requires clang 5.0 or later >&2 && exit 1
   endif
   ifneq ($(ld-name), lld)
     ifneq ($(call gold-ifversion, -ge, 112000000, y), y)
-	@echo Cannot use CONFIG_LTO_CLANG: requires LLD or GNU gold 1.12 or later >&2 
+	@echo Cannot use CONFIG_LTO_CLANG: requires LLD or GNU gold 1.12 or later >&2 && exit 1
     endif
   endif
 endif
@@ -1381,31 +1390,26 @@ endif
 ifdef lto-flags
   ifeq ($(call cc-option, $(lto-flags)),)
 	@echo Cannot use CONFIG_LTO: $(lto-flags) not supported by compiler \
-		>&2 
+		>&2 && exit 1
   endif
 endif
 # Make sure compiler supports requested stack protector flag.
 ifdef stackp-name
   ifeq ($(call cc-option, $(stackp-flag)),)
 	@echo Cannot use CONFIG_CC_STACKPROTECTOR_$(stackp-name): \
-		  $(stackp-flag) not supported by compiler >&2 
+		  $(stackp-flag) not supported by compiler >&2 && exit 1
   endif
 endif
 # Make sure compiler does not have buggy stack-protector support.
 ifdef stackp-check
   ifneq ($(shell $(CONFIG_SHELL) $(stackp-check) $(CC) $(KBUILD_CPPFLAGS) $(biarch)),y)
 	@echo Cannot use CONFIG_CC_STACKPROTECTOR_$(stackp-name): \
-                  $(stackp-flag) available but compiler is broken >&2 
+                  $(stackp-flag) available but compiler is broken >&2 && exit 1
   endif
 endif
 ifdef cfi-flags
   ifeq ($(call cc-option, $(cfi-flags)),)
-	@echo Cannot use CONFIG_CFI: $(cfi-flags) not supported by compiler >&2 
-  endif
-endif
-ifdef scs-flags
-  ifeq ($(call cc-option, $(scs-flags)),)
-	@echo Cannot use CONFIG_SHADOW_CALL_STACK: $(scs-flags) not supported by compiler >&2 
+	@echo Cannot use CONFIG_CFI: $(cfi-flags) not supported by compiler >&2 && exit 1
   endif
 endif
 	@:
