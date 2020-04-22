@@ -19,7 +19,7 @@ export KBUILD_BUILD_USER=thanas
 export KBUILD_BUILD_HOST=MLX
 
 ###setup
-MLX=~/GIT/android_kernel_xiaomi_sdm845
+MLX=~/GIT/malakas_kernel_xiaomi_sdm845
 AK=$MLX/AnyKernel3
 OUT=$MLX/out/arch/arm64/boot
 KERNEL=~/Desktop/MLX
