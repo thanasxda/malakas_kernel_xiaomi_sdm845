@@ -1,13 +1,13 @@
 #!/bin/bash
 ### MLX COMPILATION SCRIPT
 DATE_START=$(date +"%s")
-yellow="\033[1;93m" 
+yellow="\033[1;93m"
 magenta="\033[05;1;95m"
 restore="\033[0m"
 echo -e "${magenta}"
 echo ΜΑΛΆΚΑΣ KERNEL
 echo -e "${yellow}"
-make kernelversion 
+make kernelversion
 echo -e "${restore}"
 export USE_CCACHE=1
 export USE_PREBUILT_CACHE=1
@@ -19,13 +19,13 @@ export KBUILD_BUILD_USER=thanas
 export KBUILD_BUILD_HOST=MLX
 
 ###setup
-MLX=~/GIT/malakas_kernel_xiaomi_sdm845
+MLX="$(pwd)"
 AK=$MLX/AnyKernel3
 OUT=$MLX/out/arch/arm64/boot
 KERNEL=~/Desktop/MLX
 TC=~/TOOLCHAIN
 ###
-GCC32=$TC/arm-linux-gnueabi/bin 
+GCC32=$TC/arm-linux-gnueabi/bin
 GCC64=$TC/aarch64-linux-gnu/bin
 CLANG=$TC/clang/bin
 BINUTILS=$TC/binutils/bin
@@ -62,10 +62,10 @@ export CROSS_COMPILE_ARM32=$GCC32/arm-linux-gnueabi-
 #export LD_LIBRARY_PATH="$CLANG/../lib:$CLANG/../lib64:$LD_LIBRARY_PATH"
 #export PATH="$CLANG:$BINUTILS:$PATH"
 
-###start compilation 
+###start compilation
 mkdir -p out
 make O=out ARCH=arm64 $DEFCONFIG
-make O=out $THREADS $VERBOSE $CLANG_FLAGS $FLAGS 
+make O=out $THREADS $VERBOSE $CLANG_FLAGS $FLAGS
 
 ###zip kernel
 if [ -e $OUT/Image.gz-dtb ]; then
@@ -149,4 +149,3 @@ rm -rf out
 make O=out clean
 make mrproper
 fi;
-

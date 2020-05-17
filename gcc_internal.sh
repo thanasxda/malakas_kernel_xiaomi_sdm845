@@ -15,9 +15,11 @@ export PREBUILT_CACHE_DIR=~/.ccache
 export CCACHE_DIR=~/.ccache
 ccache -M 30G
 
-export KBUILD_BUILD_USER=thanas
-export KBUILD_BUILD_HOST=MLX
+#export KBUILD_BUILD_USER=thanas
+#export KBUILD_BUILD_HOST=MLX
 
+### update stuff
+#./UPDATE*
 ###setup
 MLX="$(pwd)"
 AK=$MLX/AnyKernel3
@@ -25,7 +27,6 @@ OUT=$MLX/out/arch/arm64/boot
 KERNEL=~/Desktop/MLX
 TC=~/TOOLCHAIN
 ###
-CLANG=$TC/clang/bin/
 ###
 DEFCONFIG=malakas_beryllium_defconfig
 checkhz=$( grep -ic "framerate = < 0x3C >" $MLX/arch/arm64/boot/dts/qcom/dsi-panel-tianma-fhd-nt36672a-video.dtsi )
@@ -45,8 +46,6 @@ VERSION=q
 KERNELINFO=${VERSION}_${DEVICE}_${HZ}_$(date +"%Y-%m-%d")
 KERNELNAME=malakas_kernel_$KERNELINFO.zip
 THREADS=-j$(nproc --all)
-FLAGS="AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip"
-CLANG_FLAGS="CC=clang"
 #VERBOSE="V=1"
 
 ###
@@ -56,8 +55,6 @@ export CROSS_COMPILE=aarch64-linux-gnu-
 export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
 
 #export CLANG_TRIPLE=aarch64-linux-gnu-
-export LD_LIBRARY_PATH="$CLANG/../lib:$CLANG/../lib64:$LD_LIBRARY_PATH"
-export PATH="$CLANG:$PATH"
 
 ###start compilation
 mkdir -p out
@@ -113,9 +110,7 @@ fi;
 function clean_all {
 if [ -e $MLX/out ]; then
 cd $MLX
-rm -rf out
-make O=out clean
-make mrproper
+./clean.sh
 fi;
 }
 while read -p "Clean stuff (y/n)? " cchoice
@@ -142,7 +137,5 @@ cd $MLX
 echo -e "${yellow}"
 echo overriding option, force clean due to build success
 echo -e "${restore}"
-rm -rf out
-make O=out clean
-make mrproper
+./clean.sh
 fi;
